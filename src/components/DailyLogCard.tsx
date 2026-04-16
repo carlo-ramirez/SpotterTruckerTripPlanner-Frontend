@@ -1,0 +1,140 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+import { Clock, Navigation, MapPin, CheckCircle2 } from 'lucide-react';
+import { DailyLog } from '../types/trip';
+import ELDLogGrid from './ELDLogGrid';
+
+interface DailyLogCardProps {
+  log: DailyLog;
+  index: number;
+}
+
+const DailyLogCard = ({ log, index }: DailyLogCardProps) => {
+  const date = new Date(Date.now() + (log.day - 1) * 86400000);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+      className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 md:p-10 space-y-10 group hover:shadow-2xl hover:shadow-blue-500/5 transition-all duration-500 relative overflow-hidden"
+    >
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/30 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-blue-100/40 transition-colors duration-500" />
+      
+      {/* Header Section */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative z-10">
+        <div className="flex items-center gap-5">
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-500">
+              <span className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">Day</span>
+              <span className="text-2xl font-black leading-none">{log.day}</span>
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full flex items-center justify-center shadow-sm">
+              <CheckCircle2 size={12} className="text-white" />
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+              {format(date, 'EEEE, MMM dd')}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Electronic Driver Log</span>
+              <div className="w-1 h-1 bg-slate-300 rounded-full" />
+              <span className="text-xs font-semibold text-blue-600">HOS Compliant</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1 w-full lg:w-auto">
+          <div className="flex-1 lg:flex-none bg-slate-50 border border-slate-100 px-6 py-4 rounded-[1.25rem] text-center group-hover:bg-white group-hover:border-blue-100 transition-all duration-500 shadow-sm group-hover:shadow-md">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Navigation size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-blue-400 transition-colors">Total Distance</p>
+            </div>
+            <p className="text-xl font-black text-slate-700 group-hover:text-blue-700 transition-colors">
+              {log.total_miles.toFixed(1)} <span className="text-xs font-normal opacity-50">mi</span>
+            </p>
+          </div>
+          
+          <div className="flex-1 lg:flex-none bg-slate-50 border border-slate-100 px-6 py-4 rounded-[1.25rem] text-center group-hover:bg-white group-hover:border-green-100 transition-all duration-500 shadow-sm group-hover:shadow-md">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Clock size={12} className="text-slate-400 group-hover:text-green-500 transition-colors" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-green-400 transition-colors">Driving Time</p>
+            </div>
+            <p className="text-xl font-black text-slate-700 group-hover:text-green-700 transition-colors">
+              {log.total_driving.toFixed(1)} <span className="text-xs font-normal opacity-50">hr</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Log Grid */}
+      <div className="relative z-10 rounded-3xl overflow-hidden border border-slate-100 shadow-inner bg-slate-50/30 p-1">
+        <ELDLogGrid events={log.events} />
+      </div>
+
+      {/* Events Table */}
+      <div className="relative z-10 overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+        <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+          <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Activity Breakdown</h4>
+          <span className="text-[10px] font-bold text-slate-400 italic">{log.events.length} segments recorded</span>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead>
+              <tr className="text-[10px] text-slate-400 uppercase tracking-widest bg-white border-b border-slate-50">
+                <th className="px-8 py-5 font-black">#</th>
+                <th className="px-8 py-5 font-black">Duty Status</th>
+                <th className="px-8 py-5 font-black">Duration</th>
+                <th className="px-8 py-5 font-black">Event Detail</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {log.events.map((event, i) => (
+                <tr key={i} className="group/row hover:bg-blue-50/30 transition-all duration-300">
+                  <td className="px-8 py-5">
+                    <span className="w-7 h-7 rounded-xl bg-slate-100 group-hover/row:bg-blue-100 flex items-center justify-center text-[10px] font-black text-slate-500 group-hover/row:text-blue-600 transition-colors">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        event.type === 'DRIVING' ? 'bg-blue-500 animate-pulse' : 'bg-slate-300'
+                      }`} />
+                      <span className={`inline-flex px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                        event.type === 'DRIVING' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {event.type.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5 font-bold text-slate-700">
+                    <span className="text-base">{event.duration.toFixed(1)}</span>
+                    <span className="text-[10px] font-medium opacity-40 ml-1.5">hrs</span>
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-start gap-2">
+                      <MapPin size={14} className="text-slate-300 mt-0.5 shrink-0" />
+                      <p className="text-slate-500 font-medium leading-relaxed italic text-xs">
+                        {event.desc}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+export default React.memo(DailyLogCard);
