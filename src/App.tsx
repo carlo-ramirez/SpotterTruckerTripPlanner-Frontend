@@ -10,7 +10,7 @@ import LogList from './components/LogList';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 
-const API_BASE_URL = 'https://spottertruckertripplanner-backend-production.up.railway.app/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export default function App() {
   const [formData, setFormData] = useState<TripFormData>({

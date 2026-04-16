@@ -10,11 +10,12 @@ interface DailyLogCardProps {
   index: number;
 }
 
-const DailyLogCard = ({ log, index }: DailyLogCardProps) => {
+const DailyLogCard = React.forwardRef<HTMLDivElement, DailyLogCardProps>(({ log, index }, ref) => {
   const date = new Date(Date.now() + (log.day - 1) * 86400000);
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
@@ -135,6 +136,6 @@ const DailyLogCard = ({ log, index }: DailyLogCardProps) => {
       </div>
     </motion.div>
   );
-};
+});
 
 export default React.memo(DailyLogCard);
