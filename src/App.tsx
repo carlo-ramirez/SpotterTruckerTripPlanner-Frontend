@@ -1,92 +1,17 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import axios from 'axios';
-import { AnimatePresence, motion } from 'framer-motion';
-
-import { TripData, TripFormData } from './types/trip';
+import React from 'react';
+import { AnimatePresence } from 'framer-motion';
 import TripForm from './components/TripForm';
 import MapView from './components/MapView';
 import TripSummary from './components/TripSummary';
 import LogList from './components/LogList';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+import { useTripPlanner } from './hooks/useTripPlanner';
+import { useStickySidebar } from './hooks/useStickySidebar';
 
 export default function App() {
-  const [formData, setFormData] = useState<TripFormData>({
-    current_location: '',
-    pickup_location: '',
-    dropoff_location: '',
-    cycle_used: '0'
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [tripData, setTripData] = useState<TripData | null>(null);
-  const [error, setError] = useState('');
-
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const [stickyOffset, setStickyOffset] = useState(112); // Default to top-28 (112px)
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!sidebarRef.current) return;
-
-      const sidebarHeight = sidebarRef.current.offsetHeight;
-      const viewportHeight = window.innerHeight;
-      const currentScrollY = window.scrollY;
-      const isScrollingDown = currentScrollY > lastScrollY.current;
-      
-      const topOffset = 112; // top-28
-      const bottomPadding = 40;
-      
-      // Only apply special sticky logic if sidebar is taller than viewport
-      if (sidebarHeight > viewportHeight - topOffset) {
-        const bottomOffset = viewportHeight - sidebarHeight - bottomPadding;
-        
-        if (isScrollingDown) {
-          // When scrolling down, the sidebar can move up until its bottom is visible
-          setStickyOffset(prev => Math.max(bottomOffset, prev - (currentScrollY - lastScrollY.current)));
-        } else {
-          // When scrolling up, the sidebar can move down until its top is visible
-          setStickyOffset(prev => Math.min(topOffset, prev + (lastScrollY.current - currentScrollY)));
-        }
-      } else {
-        setStickyOffset(topOffset);
-      }
-
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [tripData]); // Re-calculate when tripData (and thus sidebar height) changes
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  }, []);
-
-  const handlePlanTrip = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await axios.post(`${API_BASE_URL}/plan-trip/`, {
-        current_location: formData.current_location,
-        pickup_location: formData.pickup_location,
-        dropoff_location: formData.dropoff_location,
-        cycle_used: formData.cycle_used
-      });
-      setTripData(response.data);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to calculate trip. Please check your inputs and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { formData, loading, tripData, error, handleInputChange, handlePlanTrip } = useTripPlanner();
+  const { sidebarRef, stickyOffset } = useStickySidebar(tripData);
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-600 selection:text-white">

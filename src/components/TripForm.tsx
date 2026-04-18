@@ -43,7 +43,9 @@ const TripForm = ({ formData, onChange, onSubmit, loading, error }: TripFormProp
                     {label}
                   </label>
                   <div className="opacity-0 group-hover/field:opacity-100 transition-opacity">
-                    <Info size={12} className="text-slate-300 cursor-help" >{helper}</Info>
+                    <span title={helper}>
+                      <Info size={12} className="text-slate-300 cursor-help" />
+                    </span>
                   </div>
                 </div>
                 <div className="relative">
@@ -80,8 +82,11 @@ const TripForm = ({ formData, onChange, onSubmit, loading, error }: TripFormProp
                   className="w-full pl-16 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-[1.25rem] focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-700 placeholder:text-slate-300 placeholder:font-medium shadow-inner group-hover/field:bg-slate-100/50"
                   placeholder="0.0"
                   step="0.1"
+                  min="0"
+                  max="70"
                   value={formData.cycle_used}
                   onChange={onChange}
+                  required
                 />
                 <div className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">
                   Hours

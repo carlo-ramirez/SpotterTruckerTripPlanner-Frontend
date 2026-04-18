@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Clock, Navigation, MapPin, CheckCircle2 } from 'lucide-react';
+import { Clock, Navigation, MapPin, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { DailyLog } from '../types/trip';
 import ELDLogGrid from './ELDLogGrid';
 
@@ -10,8 +10,72 @@ interface DailyLogCardProps {
   index: number;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  OFF_DUTY: 'Off Duty',
+  SLEEPER: 'Sleeper Berth',
+  DRIVING: 'Driving',
+  ON_DUTY_NOT_DRIVING: 'On Duty (Not Driving)'
+};
+
+interface CollapsibleSectionProps {
+  title: string;
+  subtitle?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}
+
+const CollapsibleSection = ({ title, subtitle, defaultOpen = false, children }: CollapsibleSectionProps) => {
+  const [open, setOpen] = React.useState(defaultOpen);
+
+  return (
+    <div className="relative z-10 overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full px-8 py-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between text-left hover:bg-slate-100/60 transition-colors"
+      >
+        <div>
+          <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">{title}</h4>
+          {subtitle && <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{subtitle}</p>}
+        </div>
+        {open ? <ChevronDown size={16} className="text-slate-500" /> : <ChevronUp size={16} className="text-slate-500" />}
+      </button>
+      <div className={`transition-all duration-300 ${open ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        {open && children}
+      </div>
+    </div>
+  );
+};
+
+function toHourMinute(hoursSinceMidnight: number) {
+  const safeHours = Math.max(0, Math.min(24, hoursSinceMidnight));
+  const wholeHours = Math.floor(safeHours);
+  const minutes = Math.round((safeHours - wholeHours) * 60);
+  const normalizedMinutes = minutes === 60 ? 0 : minutes;
+  const normalizedHours = minutes === 60 ? wholeHours + 1 : wholeHours;
+  return `${String(normalizedHours % 24).padStart(2, '0')}:${String(normalizedMinutes).padStart(2, '0')}`;
+}
+
 const DailyLogCard = React.forwardRef<HTMLDivElement, DailyLogCardProps>(({ log, index }, ref) => {
   const date = new Date(Date.now() + (log.day - 1) * 86400000);
+  const totalsByStatus = log.events.reduce<Record<string, number>>((acc, event) => {
+    acc[event.type] = (acc[event.type] || 0) + event.duration;
+    return acc;
+  }, {});
+
+  let elapsedHours = 0;
+  const remarks = log.events.map((event) => {
+    const status = STATUS_LABELS[event.type] || event.type;
+    const remark = {
+      time: toHourMinute(elapsedHours),
+      detail: `${status} - ${event.desc}`
+    };
+    elapsedHours += event.duration;
+    return remark;
+  });
+
+  const totalHours = log.events.reduce((sum, event) => sum + event.duration, 0);
+  const is24HourComplete = Math.abs(totalHours - 24) < 0.05;
 
   return (
     <motion.div
@@ -44,7 +108,9 @@ const DailyLogCard = React.forwardRef<HTMLDivElement, DailyLogCardProps>(({ log,
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Electronic Driver Log</span>
               <div className="w-1 h-1 bg-slate-300 rounded-full" />
-              <span className="text-xs font-semibold text-blue-600">HOS Compliant</span>
+              <span className={`text-xs font-semibold ${is24HourComplete ? 'text-blue-600' : 'text-amber-600'}`}>
+                {is24HourComplete ? '24-Hour Sheet Complete' : 'Review Needed'}
+              </span>
             </div>
           </div>
         </div>
@@ -72,18 +138,134 @@ const DailyLogCard = React.forwardRef<HTMLDivElement, DailyLogCardProps>(({ log,
         </div>
       </div>
 
+      <CollapsibleSection title="Driver Daily Log Sheet" subtitle="FMCSA-style output" defaultOpen={false}>
+        <div className="p-6">
+          <div className="border-2 border-slate-900 rounded-lg p-4 space-y-3 bg-white">
+            <div className="grid grid-cols-12 gap-3 text-[10px] font-black uppercase tracking-wider text-slate-700">
+              <div className="col-span-2 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Month / Day / Year</p>
+                <p className="mt-1">{format(date, 'MM/dd/yyyy')}</p>
+              </div>
+              <div className="col-span-2 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Total Miles Driving Today</p>
+                <p className="mt-1">{log.total_miles.toFixed(1)}</p>
+              </div>
+              <div className="col-span-4 border-b border-slate-500 pb-1 text-center">
+                <p className="text-[12px] text-slate-900">Driver's Daily Log</p>
+                <p className="text-[9px]">One Calendar Day - 24 Hours</p>
+              </div>
+              <div className="col-span-2 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Truck / Tractor</p>
+                <p className="mt-1">N/A</p>
+              </div>
+              <div className="col-span-2 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Trailer</p>
+                <p className="mt-1">N/A</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-12 gap-3 text-[10px] font-black uppercase tracking-wider text-slate-700">
+              <div className="col-span-5 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Name of Carrier</p>
+                <p className="mt-1">Spotter Trip Planner</p>
+              </div>
+              <div className="col-span-3 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Main Office Address</p>
+                <p className="mt-1">N/A (Demo)</p>
+              </div>
+              <div className="col-span-2 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Co-driver</p>
+                <p className="mt-1">N/A</p>
+              </div>
+              <div className="col-span-2 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Total Hours</p>
+                <p className="mt-1">{totalHours.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-12 gap-3 text-[10px] font-black uppercase tracking-wider text-slate-700">
+              <div className="col-span-6 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Shipping Document / Commodity</p>
+                <p className="mt-1">Pickup to dropoff route</p>
+              </div>
+              <div className="col-span-4 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">Driver Signature / Certification</p>
+                <p className="mt-1">Generated by system</p>
+              </div>
+              <div className="col-span-2 border-b border-slate-500 pb-1">
+                <p className="text-slate-400 text-[9px]">24-hr Start</p>
+                <p className="mt-1">Midnight</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CollapsibleSection>
+
       {/* Visual Log Grid */}
-      <div className="relative z-10 rounded-3xl overflow-hidden border border-slate-100 shadow-inner bg-slate-50/30 p-1">
-        <ELDLogGrid events={log.events} />
+      <CollapsibleSection title="24-Hour Graph Grid" defaultOpen={true}>
+        <div className="p-1 bg-slate-50/30">
+          <ELDLogGrid events={log.events} />
+        </div>
+      </CollapsibleSection>
+
+      {/* Totals + Remarks */}
+      <CollapsibleSection title="Status Totals & Remarks" defaultOpen={false}>
+        <div className="p-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+            <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Status Totals</h4>
+          </div>
+          <div className="p-6 grid grid-cols-2 gap-4 text-sm">
+            {Object.entries(STATUS_LABELS).map(([key, label]) => (
+              <div key={key} className="rounded-xl border border-slate-100 p-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+                <p className="font-bold text-slate-700 mt-1">{(totalsByStatus[key] || 0).toFixed(2)} hrs</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+            <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Remarks (Duty Changes)</h4>
+          </div>
+          <div className="p-4 max-h-64 overflow-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-slate-400 uppercase tracking-widest">
+                  <th className="text-left px-3 py-2">Time</th>
+                  <th className="text-left px-3 py-2">Entry</th>
+                </tr>
+              </thead>
+              <tbody>
+                {remarks.map((remark, i) => (
+                  <tr key={`${remark.time}-${i}`} className="border-t border-slate-50">
+                    <td className="px-3 py-2 font-black text-slate-500">{remark.time}</td>
+                    <td className="px-3 py-2 text-slate-600">{remark.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="xl:col-span-2 overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+            <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Shipping Documents / Shipper / Commodity</h4>
+          </div>
+          <div className="p-6">
+            <div className="min-h-20 border-2 border-dashed border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-500">
+              Pickup to dropoff route manifest (auto-generated)
+            </div>
+          </div>
+        </div>
       </div>
+      </CollapsibleSection>
 
       {/* Events Table */}
-      <div className="relative z-10 overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
-        <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
-          <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Activity Breakdown</h4>
-          <span className="text-[10px] font-bold text-slate-400 italic">{log.events.length} segments recorded</span>
-        </div>
-        
+      <CollapsibleSection
+        title="Activity Breakdown"
+        subtitle={`${log.events.length} segments recorded`}
+        defaultOpen={false}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
             <thead>
@@ -108,8 +290,8 @@ const DailyLogCard = React.forwardRef<HTMLDivElement, DailyLogCardProps>(({ log,
                         event.type === 'DRIVING' ? 'bg-blue-500 animate-pulse' : 'bg-slate-300'
                       }`} />
                       <span className={`inline-flex px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                        event.type === 'DRIVING' 
-                          ? 'bg-blue-100 text-blue-700' 
+                        event.type === 'DRIVING'
+                          ? 'bg-blue-100 text-blue-700'
                           : 'bg-slate-100 text-slate-600'
                       }`}>
                         {event.type.replace(/_/g, ' ')}
@@ -133,7 +315,7 @@ const DailyLogCard = React.forwardRef<HTMLDivElement, DailyLogCardProps>(({ log,
             </tbody>
           </table>
         </div>
-      </div>
+      </CollapsibleSection>
     </motion.div>
   );
 });

@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TripData } from '../types/trip';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 // Fix for default marker icons in Leaflet with React
 const DefaultIcon = L.icon({
@@ -26,8 +27,11 @@ interface MapViewProps {
 }
 
 const MapView = ({ tripData }: MapViewProps) => {
-  const getPolylinePoints = (geojson: any) => {
-    return geojson.coordinates.map((coord: any) => [coord[1], coord[0]] as [number, number]);
+  const [showTripInsights, setShowTripInsights] = useState(false);
+
+  const getPolylinePoints = (geojson: { coordinates?: [number, number][] }) => {
+    if (!geojson?.coordinates?.length) return [];
+    return geojson.coordinates.map((coord) => [coord[1], coord[0]] as [number, number]);
   };
 
   const mapContent = useMemo(() => {
@@ -36,6 +40,7 @@ const MapView = ({ tripData }: MapViewProps) => {
     const pickupPoints = getPolylinePoints(tripData.route.to_pickup);
     const dropoffPoints = getPolylinePoints(tripData.route.to_dropoff);
     const allPoints = [...pickupPoints, ...dropoffPoints];
+    if (!allPoints.length) return null;
     const bounds = L.latLngBounds(allPoints);
 
     return {
@@ -46,6 +51,16 @@ const MapView = ({ tripData }: MapViewProps) => {
       pickup: pickupPoints[pickupPoints.length - 1],
       dropoff: dropoffPoints[dropoffPoints.length - 1]
     };
+  }, [tripData]);
+
+  const tripInsights = useMemo(() => {
+    if (!tripData) return null;
+    const allEvents = tripData.daily_logs.flatMap((log) => log.events);
+    const fuelStops = allEvents.filter((event) => event.desc === 'Fueling').length;
+    const restBreaks = allEvents.filter((event) => event.desc === '30-minute Rest Break').length;
+    const mandatoryRests = allEvents.filter((event) => event.desc === 'Mandatory 10-hour Rest').length;
+
+    return { fuelStops, restBreaks, mandatoryRests };
   }, [tripData]);
 
   return (
@@ -93,6 +108,39 @@ const MapView = ({ tripData }: MapViewProps) => {
             <span className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">🗺️</span>
             Your route will appear here
           </p>
+        </div>
+      )}
+
+      {tripInsights && (
+        <div className="absolute bottom-4 left-4 right-4 md:right-auto md:w-[420px] bg-white/95 backdrop-blur border border-slate-200 rounded-2xl z-[500] shadow-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowTripInsights((prev) => !prev)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+          >
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Route Stops & Rest Info</p>
+            {showTripInsights ? (
+              <ChevronDown size={16} className="text-slate-500" />
+            ) : (
+              <ChevronUp size={16} className="text-slate-500" />
+            )}
+          </button>
+          <div className={`transition-all duration-300 ${showTripInsights ? 'max-h-48 opacity-100 p-4 pt-0' : 'max-h-0 opacity-0 p-0'}`}>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 py-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase">Fuel Stops</p>
+                <p className="text-lg font-black text-slate-700">{tripInsights.fuelStops}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-100 py-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase">30m Breaks</p>
+                <p className="text-lg font-black text-slate-700">{tripInsights.restBreaks}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-100 py-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase">10h Rests</p>
+                <p className="text-lg font-black text-slate-700">{tripInsights.mandatoryRests}</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
