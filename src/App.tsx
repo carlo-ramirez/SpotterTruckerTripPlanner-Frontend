@@ -23,7 +23,7 @@ export default function App() {
 
       <Header />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-10 relative z-10">
+      <main className="max-w-screen-2xl mx-auto p-4 md:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-10 relative z-10">
         {/* Left Column: Input & Summary */}
         <aside className="lg:col-span-4">
           <div 

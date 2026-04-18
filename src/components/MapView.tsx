@@ -64,7 +64,7 @@ const MapView = ({ tripData }: MapViewProps) => {
   }, [tripData]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden h-[500px] relative group">
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden h-[550px] relative group">
       <MapContainer 
         center={[39.8283, -98.5795]} 
         zoom={4} 

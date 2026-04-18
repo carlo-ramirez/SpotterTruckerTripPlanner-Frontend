@@ -115,7 +115,7 @@ const DailyLogCard = React.forwardRef<HTMLDivElement, DailyLogCardProps>(({ log,
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1 w-full lg:w-auto">
+        <div className="flex flex-wrap gap-4 w-full lg:w-auto">
           <div className="flex-1 lg:flex-none bg-slate-50 border border-slate-100 px-6 py-4 rounded-[1.25rem] text-center group-hover:bg-white group-hover:border-blue-100 transition-all duration-500 shadow-sm group-hover:shadow-md">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Navigation size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
